@@ -21,14 +21,37 @@ Start locally: `docker compose up -d db` → `pnpm db:migrate` → `pnpm db:seed
 
 ### Seeded test accounts
 
-| Role | Email | Password |
-|---|---|---|
-| ADMIN | admin@taskflow.dev | Password@123 |
-| MANAGER | manager@taskflow.dev | Password@123 |
-| MEMBER | member@taskflow.dev | Password@123 |
-| GUEST (read-only) | guest@taskflow.dev | *no password*: use **Continue as guest** on the login page (`POST /auth/guest`) |
+`pnpm db:seed` creates a fictional company: **28 people, 8 projects, 68 tasks and 24 comments**, plus the guest account. Every account's password is **`Password@123`** and every email is `firstname.lastname@taskflow.dev`. The three original accounts are kept for short, easy logins.
 
-Seeded data: projects **WEB** "Website Revamp" (owner: manager; members: manager, member, admin) and **MOB** "Mobile App" (owner: admin; members: admin, member), with 6 tasks between them.
+| Role | Accounts |
+|---|---|
+| ADMIN (2) | `admin@taskflow.dev` (Asha Admin), `priya.sharma@` |
+| MANAGER (5) | `manager@taskflow.dev` (Manoj Manager), `rahul.verma@`, `ananya.iyer@`, `vikram.singh@`, `neha.kapoor@` |
+| MEMBER (20 active) | `member@taskflow.dev` (Meera Member), `arjun.reddy@`, `kavya.nair@`, `rohan.das@`, `sneha.patel@`, `aditya.joshi@`, `isha.gupta@`, `karan.mehta@`, `divya.menon@`, `siddharth.rao@`, `pooja.kulkarni@`, `amit.mishra@`, `riya.banerjee@`, `nikhil.jain@`, `tanvi.desai@`, `varun.pillai@`, `meghna.chatterjee@`, `sameer.khan@`, `lakshmi.subramanian@`, `farhan.ali@` |
+| MEMBER (deactivated) | `harsh.agarwal@`: login is blocked with "Account is deactivated" |
+| GUEST (read-only) | `guest@taskflow.dev`: *no password*, use **Continue as guest** (`POST /auth/guest`) |
+
+### Seeded projects
+
+| Key | Project | Owner | Members | Tasks | Notes |
+|---|---|---|---|---|---|
+| WEB | Website Revamp | Manoj Manager | 6 | 10 | |
+| MOB | Mobile App | Asha Admin | 5 | 8 | |
+| CRM | CRM Integration | Rahul Verma | 5 | 9 | Rahul is a manager who owns only this project |
+| HR | HR Portal | Ananya Iyer | 5 | 8 | |
+| PAY | Payments Gateway | Vikram Singh | 6 | 10 | Several CRITICAL tasks |
+| DATA | Data Warehouse | Neha Kapoor | 5 | 8 | Includes the deactivated user's finished work |
+| QA | QA Automation | Manoj Manager | 6 | 9 | |
+| OPS | Cloud Migration | Priya Sharma | 4 | 6 | **ARCHIVED**: read-only, no new tasks |
+
+Handy accounts for specific scenarios:
+- **Many projects:** `admin@` and `priya.sharma@` see all 8.
+- **One project:** `rahul.verma@` (manager) sees only CRM.
+- **No projects at all:** `farhan.ali@` (empty states on Projects and Dashboard).
+- **Overdue work:** `kavya.nair@` belongs to WEB and DATA, which contain 3 overdue tasks (her dashboard shows Overdue = 3). `nikhil.jain@` is personally assigned an overdue CRITICAL bug (PAY-5).
+- **Pagination:** the Users page has 29 accounts, so 3 pages of 10.
+
+Due dates are relative to the day you seed (e.g. "3 days ago", "in 7 days"), so some tasks are always overdue. Re-running the seed never duplicates anything; it only adds people or projects that are missing.
 
 > Good practice: don't build tests that depend on seeded tasks staying unchanged. Create your own data (ideally through the API) and clean it up.
 
