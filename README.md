@@ -7,7 +7,7 @@
 | | Link |
 |---|---|
 | 🌐 Live app | `https://<your-app>.vercel.app` |
-| 📘 API docs (Swagger) | `https://<your-api>.onrender.com/api/docs` |
+| 📘 API docs (Swagger) | `[https://<your-api>.onrender.com/api/docs](https://taskflow-pro-api-fb40.onrender.com/api/docs)` |
 | 📊 Test report (once you build the CI stories) | `https://<your-username>.github.io/taskflow-pro/` |
 
 > Demo accounts (password `Password@123`): `admin@taskflow.dev`, `manager@taskflow.dev`, `member@taskflow.dev`, or click **Continue as guest** for read-only access with no sign-up.
