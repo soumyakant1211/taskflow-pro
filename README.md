@@ -2,7 +2,7 @@
 
 **Enterprise project & task management platform, built as a realistic *system under test* for learning test automation across multiple tech stacks.**
 
-[![CI](https://github.com/<your-username>/taskflow-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/taskflow-pro/actions/workflows/ci.yml)
+[![CI](https://github.com/soumyakant1211/taskflow-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/soumyakant1211/taskflow-pro/actions/workflows/ci.yml)
 
 | | Link |
 |---|---|
