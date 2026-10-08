@@ -6,7 +6,7 @@
 
 | | Link |
 |---|---|
-| 🌐 Live app | `https://<your-app>.vercel.app` |
+| 🌐 Live app | `https://taskflow-pro-alpha-lake.vercel.app/` |
 | 📘 API docs (Swagger) | `https://taskflow-pro-api-fb40.onrender.com/api/docs` |
 | 📊 Test report (once you build the CI stories) | `https://<your-username>.github.io/taskflow-pro/` |
 
