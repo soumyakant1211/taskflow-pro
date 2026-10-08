@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskFlow Automation Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sprint-planning tool. Header + toolbar, then one of three views:
+   status board (drag between workflow columns), sprint board (drag between sprints), list. */
+:root {
+  --bg: #f4f5f3; --surface: #ffffff; --sunken: #eceeeb; --ink: #18211c; --muted: #5c6962; --line: #dce1db;
+  --accent: #1f6f4a; --accent-ink: #ffffff;
+  --todo: #5f6a64; --todo-bg: #e7eae6; --prog: #1d5fa8; --prog-bg: #e2ecf8; --rev: #8a5a00; --rev-bg: #fbf0d9;
+  --chg: #b4361f; --chg-bg: #fbe6e1; --done: #1f6f4a; --done-bg: #e1f0e7; --shadow: 0 1px 2px rgba(20,30,25,.08);
+  --e-QA: #6d5bd0; --e-PW: #2d7d46; --e-SJ: #c0571c; --e-PY: #2f6db5; --e-CY: #2a8f8a; --e-RF: #8f3d8a;
+  --e-WD: #b58a12; --e-PM: #d0542f; --e-TO: #3d5a8f; --e-CI: #4b5563; --e-NF: #9c3d3d; --e-AI: #7a4fcf;
+  --display: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+  --body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101512; --surface: #181f1b; --sunken: #141a17; --ink: #e5ebe7; --muted: #94a29a; --line: #29332d;
+  --accent: #4fbf86; --accent-ink: #0d1a13;
+  --todo: #a8b2ac; --todo-bg: #232a26; --prog: #7fb4f0; --prog-bg: #1a2a3c; --rev: #f0b85a; --rev-bg: #3a2c13;
+  --chg: #ff8f78; --chg-bg: #3c1f19; --done: #4fbf86; --done-bg: #183224; --shadow: none;
+  --e-QA: #a596f5; --e-PW: #5cc27c; --e-SJ: #f08a52; --e-PY: #6fa6ee; --e-CY: #55c7c1; --e-RF: #d07ccb;
+  --e-WD: #e3bd4e; --e-PM: #f08766; --e-TO: #8ea8dc; --e-CI: #a5adba; --e-NF: #e08585; --e-AI: #b192f5;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #101512; --surface: #181f1b; --sunken: #141a17; --ink: #e5ebe7; --muted: #94a29a; --line: #29332d;
+  --accent: #4fbf86; --accent-ink: #0d1a13;
+  --todo: #a8b2ac; --todo-bg: #232a26; --prog: #7fb4f0; --prog-bg: #1a2a3c; --rev: #f0b85a; --rev-bg: #3a2c13;
+  --chg: #ff8f78; --chg-bg: #3c1f19; --done: #4fbf86; --done-bg: #183224; --shadow: none;
+  --e-QA: #a596f5; --e-PW: #5cc27c; --e-SJ: #f08a52; --e-PY: #6fa6ee; --e-CY: #55c7c1; --e-RF: #d07ccb;
+  --e-WD: #e3bd4e; --e-PM: #f08766; --e-TO: #8ea8dc; --e-CI: #a5adba; --e-NF: #e08585; --e-AI: #b192f5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 22px 60px; display: grid; gap: 16px; }
+.wrap > * { min-width: 0; }
+h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: 28px; font-weight: 700; }
+.eyebrow { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+header { display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: flex-end; justify-content: space-between; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 72ch; }
+.stats { display: flex; flex-wrap: wrap; gap: 22px; }
+.stat b { display: block; font: 600 24px var(--mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.progress { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; display: flex; }
+.progress i { height: 100%; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tabs { display: inline-flex; background: var(--sunken); border-radius: 8px; padding: 3px; }
+.tabs button { border: 0; background: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.toolbar input[type=search], .toolbar select { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 0; }
+.toolbar input[type=search] { flex: 1 1 180px; max-width: 300px; }
+.spacer { flex: 1; }
+.btn { border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 600; cursor: pointer; background: var(--accent); color: var(--accent-ink); white-space: nowrap; }
+.btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+.btn.danger { background: none; color: var(--chg); border: 1px solid var(--chg); }
+.btn.sm { padding: 4px 10px; font-size: 12px; }
+.epics { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px 3px 8px; cursor: pointer; font-size: 12px; font-weight: 500; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.chip[aria-pressed="true"] { border-color: var(--c); box-shadow: inset 0 0 0 1px var(--c); }
+.chip .n { color: var(--muted); font: 500 11px var(--mono); }
+
+/* columns (both boards) */
+.cols { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+.cols.sprints { grid-auto-columns: 270px; }
+.col { background: var(--sunken); border-radius: 10px; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; min-height: 200px;
+  max-height: max(420px, calc(100vh - 150px)); overflow-y: auto; overscroll-behavior: contain; }
+.col > .col-head { position: sticky; top: 0; z-index: 1; background: var(--sunken); padding-top: 10px; margin-bottom: -2px; }
+.col.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 4px; }
+.col-head h3 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.pill { font: 600 11px var(--mono); padding: 1px 7px; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.cap { height: 4px; border-radius: 2px; background: var(--surface); overflow: hidden; }
+.cap i { display: block; height: 100%; background: var(--accent); }
+.cap.over i { background: var(--chg); }
+.card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 8px; padding: 9px 10px 8px; cursor: grab; display: grid; gap: 6px; box-shadow: var(--shadow); }
+.card:hover { border-color: var(--c); }
+.card.dragging { opacity: .45; }
+.card .t { font-weight: 500; line-height: 1.35; }
+.card .row { display: flex; align-items: center; gap: 6px; justify-content: space-between; font-size: 12px; flex-wrap: wrap; }
+.key { font: 600 11px var(--mono); color: var(--c); }
+.pts { font: 600 11px var(--mono); background: var(--sunken); border-radius: 999px; padding: 0 7px; color: var(--muted); }
+.prio { font-size: 11px; color: var(--muted); }
+.prio.Highest, .prio.High { color: var(--chg); }
+.acbar { height: 3px; background: var(--sunken); border-radius: 2px; overflow: hidden; }
+.acbar i { display: block; height: 100%; background: var(--c); }
+.status-pill { font: 500 11px var(--body); padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.s-todo { background: var(--todo-bg); color: var(--todo); }
+.s-in_progress { background: var(--prog-bg); color: var(--prog); }
+.s-in_review { background: var(--rev-bg); color: var(--rev); }
+.s-changes_requested { background: var(--chg-bg); color: var(--chg); }
+.s-done { background: var(--done-bg); color: var(--done); }
+.verdict { font: 600 10px var(--mono); padding: 1px 6px; border-radius: 4px; }
+.v-approved { background: var(--done-bg); color: var(--done); }
+.v-changes_requested { background: var(--chg-bg); color: var(--chg); }
+.empty-col { color: var(--muted); font-size: 12px; text-align: center; padding: 16px 0; }
+
+/* list */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.title { white-space: normal; min-width: 260px; }
+th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--sunken); cursor: pointer; user-select: none; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--sunken); }
+
+/* modal */
+.scrim { position: fixed; inset: 0; background: rgba(10,15,12,.4); z-index: 20; display: flex; justify-content: flex-end; }
+.panel { width: min(680px, 100%); height: 100%; background: var(--surface); overflow-y: auto; padding: 18px 22px 40px; display: grid; gap: 16px; align-content: start; border-left: 1px solid var(--line); }
+.panel .top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.field { display: grid; gap: 4px; font-size: 12px; font-weight: 500; color: var(--muted); min-width: 0; }
+.field input, .field select, .field textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 14px; color: var(--ink); min-width: 0; width: 100%; }
+.field textarea { min-height: 64px; resize: vertical; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.section h3 { font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+.ac-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ac-list li { display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 8px; align-items: start; }
+.ac-list input[type=checkbox] { margin-top: 4px; accent-color: var(--accent); width: 16px; height: 16px; }
+.ac-list textarea { width: 100%; border: 1px solid transparent; background: none; border-radius: 4px; padding: 2px 6px; resize: vertical; min-height: 28px; font-size: 14px; color: var(--ink); }
+.ac-list textarea:hover, .ac-list textarea:focus { border-color: var(--line); background: var(--surface); }
+.ac-list li.checked textarea { color: var(--muted); text-decoration: line-through; }
+.x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px; }
+.x:hover { color: var(--chg); }
+details.hints { background: var(--sunken); border-radius: 8px; padding: 10px 12px; }
+details.hints summary { cursor: pointer; font-weight: 500; }
+.review { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+.review.approved { border-color: var(--done); } .review.changes_requested { border-color: var(--chg); }
+.review ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.review li { background: var(--sunken); border-radius: 6px; padding: 6px 10px; }
+.sev { font: 600 10px var(--mono); text-transform: uppercase; margin-right: 6px; }
+.sev.blocker, .sev.major { color: var(--chg); } .sev.minor { color: var(--rev); } .sev.nit, .sev.praise { color: var(--done); }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; z-index: 30; font-size: 13px; }
+.dialog { background: var(--surface); border-radius: 10px; padding: 18px; width: min(560px, calc(100% - 32px)); margin: auto; display: grid; gap: 10px; }
+.dialog textarea { width: 100%; min-height: 200px; font: 12px var(--mono); border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--surface); color: var(--ink); }
+.center { align-items: center; justify-content: center; }
+@media (max-width: 640px) { .grid4 { grid-template-columns: repeat(2, minmax(0,1fr)); } .grid2 { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .card, .chip { transition: border-color .15s, opacity .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">TaskFlow Pro · automation backlog</div>
+      <h1>TaskFlow Automation Tracker</h1>
+      <p>Drag tickets between workflow columns on the <b>Status board</b>, or between sprints on the <b>Sprint board</b>. Click a ticket to edit it. Your changes save in this browser; use <b>Export</b> to back them up or send them to Claude for review.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <div class="toolbar">
+    <div class="tabs" role="tablist" aria-label="View">
+      <button role="tab" data-view="status" id="tab-status">Status board</button>
+      <button role="tab" data-view="sprint" id="tab-sprint">Sprint board</button>
+      <button role="tab" data-view="list" id="tab-list">List</button>
+    </div>
+    <select id="f-sprint" aria-label="Filter by sprint"></select>
+    <select id="f-status" aria-label="Filter by status"></select>
+    <input id="q" type="search" placeholder="Search key, title, label…" aria-label="Search">
+    <span class="spacer"></span>
+    <button class="btn" id="new-story" type="button">+ New story</button>
+    <button class="btn ghost" id="add-sprint" type="button">+ Sprint</button>
+    <button class="btn ghost" id="export" type="button">Export</button>
+    <button class="btn ghost" id="import" type="button">Import</button>
+  </div>
+  <div class="epics" id="epics" role="group" aria-label="Filter by epic"></div>
+  <main id="view"></main>
+  <p class="muted" style="font-size:12px;margin:0">Saved in this browser (localStorage). Clearing site data or switching browsers starts from the default backlog, so export regularly. <button class="btn ghost sm" id="reset" type="button">Reset to default backlog</button></p>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script>
+const SEED = [{"key": "QA-1", "epic": "QA", "title": "Explore the app and map its features", "story": "As a QA engineer, I want to explore TaskFlow Pro as each role so that I understand what needs testing.", "ac": ["Log in as admin, manager and member and use every page", "qa/feature-map.md lists every page, the main actions on it and which roles can use them", "At least 5 open questions or suspected issues noted for later"], "hints": ["Use docs/TESTING-GUIDE.md as the spec; note anything the app does differently", "Try the API in Swagger (/api/docs) with the \"Authorize\" button"], "points": 2, "priority": "Highest", "sprint": 1, "labels": ["exploratory"]}, {"key": "QA-2", "epic": "QA", "title": "Write the test plan", "story": "As a QA lead, I want a one-page test plan so that the team agrees on scope, approach and environments.", "ac": ["qa/test-plan.md covers: scope / out of scope, test types (UI, API, E2E, non-functional), environments, entry/exit criteria, risks, tools per stack", "Includes a risk-based priority for each module (Auth, Projects, Tasks, Kanban, Admin)"], "hints": ["Keep it to 1–2 pages; interviewers ask about test plans, not essays"], "points": 3, "priority": "High", "sprint": 1, "labels": ["documentation"]}, {"key": "QA-3", "epic": "QA", "title": "Design test cases for Authentication", "story": "As a QA engineer, I want written test cases for register/login/logout so that automation has a clear source of truth.", "ac": ["qa/test-cases/auth.csv (or .xlsx) with columns: ID, Title, Preconditions, Steps, Test data, Expected result, Priority, Type", "Covers positive, negative and boundary cases (name 1/2/60/61 chars, password rules, duplicate email, case-insensitive email)", "At least 20 test cases"], "hints": ["Apply equivalence partitioning and boundary value analysis to every field rule in the guide"], "points": 3, "priority": "High", "sprint": 1, "labels": ["test-design"]}, {"key": "QA-4", "epic": "QA", "title": "Design test cases for Projects, Tasks and Kanban", "story": "As a QA engineer, I want test cases for the core workflows so that the riskiest areas are covered.", "ac": ["qa/test-cases/projects-tasks.csv with at least 30 cases", "Includes every business rule in section 3 of the guide (assignee before IN_REVIEW/DONE, archived read-only, owner cannot be removed, label normalisation…)", "A role × action RBAC matrix (qa/rbac-matrix.md) for all 4 roles, including the read-only GUEST, with the expected HTTP status for each cell"], "hints": ["Decision tables work well for the role/permission rules"], "points": 5, "priority": "High", "sprint": 1, "labels": ["test-design", "rbac"]}, {"key": "QA-5", "epic": "QA", "title": "Report bugs in a real format", "story": "As a QA engineer, I want any defects I find written as proper bug reports so that a developer could fix them without asking me questions.", "ac": ["qa/bugs/ has one Markdown file per bug: title, environment, steps, expected, actual, severity, priority, evidence (screenshot or curl)", "If you find none, write one for a \"suggested improvement\" you noticed"], "hints": ["Severity is impact; priority is urgency. Know the difference for interviews"], "points": 1, "priority": "Medium", "sprint": 1, "labels": ["documentation"]}, {"key": "PW-101", "epic": "PW", "title": "Set up the Playwright + TypeScript project", "story": "As an SDET, I want a clean Playwright project so that every later story has a solid base.", "ac": ["tests/playwright-ts initialised with @playwright/test and TypeScript", "playwright.config.ts: baseURL from env var (default http://localhost:3000), testIdAttribute \"data-testid\", HTML + list reporters, trace/screenshot/video on failure only", "Separate projects for \"api\" and \"chromium\"", ".env.example and README with install/run commands", "One smoke test: login page loads and shows the \"Sign in\" title"], "hints": ["npm init playwright@latest gives you a starting point; then shape it", "Keep URLs in one config file so you can switch to the deployed environment later"], "points": 2, "priority": "Highest", "sprint": 1, "labels": ["setup"]}, {"key": "PW-102", "epic": "PW", "title": "Page Object Model for login and the app shell", "story": "As an SDET, I want page objects for Login and the shared header/sidebar so that tests read like user actions.", "ac": ["BasePage with goto() and a \"ready\" check", "LoginPage, AppHeader (user name, role badge, nav links, logout) as classes", "No raw selectors inside spec files"], "hints": ["Expose locators as readonly properties; keep assertions in tests, not in page objects (mostly)"], "points": 3, "priority": "Highest", "sprint": 1, "labels": ["pom"]}, {"key": "PW-103", "epic": "PW", "title": "Login tests: all roles, validation and redirects", "story": "As a user, I want login to work correctly so that only valid users get in.", "ac": ["Data-driven: admin, manager and member each log in and see their name and role badge", "Wrong password shows \"Invalid email or password\"", "Empty and malformed email show client-side errors", "Show/Hide password toggles the input type", "Visiting /tasks logged-out redirects to /login?next=%2Ftasks and returns there after login", "Logout goes to plain /login and protected pages are no longer reachable"], "hints": ["Loop over a data array to generate tests", "toHaveURL accepts a RegExp"], "points": 5, "priority": "Highest", "sprint": 1, "labels": ["ui", "auth"]}, {"key": "PW-104", "epic": "PW", "title": "Reuse login state per role (storageState)", "story": "As an SDET, I want to log in once per role so that UI tests are fast.", "ac": ["A setup project logs in as each role and saves storage state to .auth/<role>.json (git-ignored)", "UI specs default to manager; individual describe blocks switch role", "Login tests themselves start logged out"], "hints": ["The app keeps its JWT in localStorage; storageState captures localStorage too", "Project dependencies make setup run first"], "points": 3, "priority": "High", "sprint": 1, "labels": ["auth", "framework"]}, {"key": "PW-105", "epic": "PW", "title": "Registration tests", "story": "As a new user, I want to create an account so that I can start using TaskFlow.", "ac": ["Successful registration lands on the dashboard as MEMBER", "Each invalid field shows its own message (name, email, weak password, confirm mismatch)", "Registering an existing email shows \"Email is already registered\"", "Test data is unique per run"], "hints": ["Faker (or a timestamp) keeps emails unique so tests can run in parallel"], "points": 3, "priority": "High", "sprint": 2, "labels": ["ui", "auth"]}, {"key": "PW-106", "epic": "PW", "title": "API client layer + auth API tests", "story": "As an SDET, I want typed API helpers so that API tests and UI test setup share one client.", "ac": ["A small client wrapping APIRequestContext with get/post/patch/delete and bearer token support; it must not throw on 4xx so negative tests can assert", "Auth API tests: login 200 + JWT shape, wrong password 401, malformed email 400, unknown field 400, register 201 as MEMBER, duplicate 409", "Weak-password cases are data-driven (at least 5)", "Missing token and tampered token → 401 on /auth/me"], "hints": ["request.newContext({ baseURL }) in a fixture or factory", "Assert the error JSON shape too: statusCode, error, message, path, timestamp"], "points": 5, "priority": "Highest", "sprint": 2, "labels": ["api", "auth"]}, {"key": "PW-107", "epic": "PW", "title": "Projects API: CRUD, validation and RBAC", "story": "As an SDET, I want the project endpoints covered so that permission bugs are caught early.", "ac": ["Manager creates a project → becomes owner and only member", "Key rules: lower-case input is upper-cased; duplicates 409; invalid keys (A, TOOLONGKEY, AB1, A-B) 400", "MEMBER cannot create (403); non-member gets 403 on GET; unknown id 404; malformed id 400", "Owner can update and archive; empty PATCH body → 400", "Owner cannot be removed; removing a member unassigns their open tasks", "Every test cleans up the projects it created"], "hints": ["An admin-token cleanup in afterEach/fixture teardown keeps the database tidy"], "points": 8, "priority": "Highest", "sprint": 2, "labels": ["api", "rbac"]}, {"key": "PW-108", "epic": "PW", "title": "Test-data fixture: arrange through the API", "story": "As an SDET, I want a fixture that creates projects/tasks via the API and deletes them afterwards so that UI tests stay fast and independent.", "ac": ["A custom fixture (test.extend) exposing e.g. testData.createProject({members}) and testData.createTask(projectId, {...})", "Created data is deleted after each test even if the test fails", "At least two existing UI tests refactored to use it"], "hints": ["Worker-scoped fixtures are good for things like cached API tokens"], "points": 5, "priority": "High", "sprint": 2, "labels": ["framework", "test-data"]}, {"key": "PW-109", "epic": "PW", "title": "Tasks API: business rules, filters, pagination", "story": "As an SDET, I want the task rules automated so that the core of the product is protected.", "ac": ["Task keys are sequential per project (KEY-1, KEY-2)", "Labels are trimmed, lower-cased and de-duplicated", "Assignee must be a project member; archived project rejects new tasks", "IN_REVIEW and DONE are rejected without an assignee, accepted with one", "Filters: status, priority, assigneeId=me, label, overdue (DONE never overdue), search by title and by key", "Sort by priority desc returns CRITICAL, HIGH, MEDIUM, LOW; pagination has no duplicates across pages"], "hints": ["Create exactly the data each assertion needs inside its own project so counts are exact"], "points": 8, "priority": "Highest", "sprint": 3, "labels": ["api"]}, {"key": "PW-110", "epic": "PW", "title": "Contract tests with schema validation", "story": "As an SDET, I want response schemas validated so that breaking API changes fail loudly.", "ac": ["Schemas for User, AuthResponse, Project list item, Task, Comment, Error, Dashboard (Zod, Ajv or similar)", "User schema is strict: a leaked passwordHash field must fail the test", "Failure output shows which field broke"], "hints": ["/api/docs-json is the OpenAPI spec if you want to generate types instead"], "points": 5, "priority": "Medium", "sprint": 3, "labels": ["api", "contract"]}, {"key": "PW-111", "epic": "PW", "title": "Projects UI: create, search, settings", "story": "As a manager, I want to manage projects in the UI so that my team can organise work.", "ac": ["Create project via the modal → redirected to its board, toast shown, key displayed", "Client-side validation messages for bad key and short name", "Duplicate key shows the server error inside the modal", "Search by key filters cards; no match shows the empty state", "Rename, archive (New task button disappears) and delete with confirm dialog", "Member role: no \"New project\" button and no Settings tab"], "hints": ["Use the API fixture to create the project for search/settings tests"], "points": 5, "priority": "High", "sprint": 3, "labels": ["ui"]}, {"key": "PW-112", "epic": "PW", "title": "Kanban board: create and move tasks", "story": "As a team member, I want to move cards across the board so that progress is visible.", "ac": ["Create a task from the board with all fields; card shows key, priority, label", "\"+\" on a column pre-selects that status", "Drag & drop a card TODO → IN_PROGRESS; verify the column, the toast, and the status through the API; survives reload", "Moving an unassigned card to DONE shows the error toast and the card snaps back to its column"], "hints": ["locator.dragTo() works with native HTML5 drag events in Chromium", "expect.poll is handy for checking the API after a UI action"], "points": 8, "priority": "Highest", "sprint": 3, "labels": ["ui", "kanban"]}, {"key": "PW-113", "epic": "PW", "title": "Task detail and comments", "story": "As a team member, I want to edit tasks and discuss them in comments.", "ac": ["Edit title, priority, assignee and description via the modal; detail panel updates", "Status dropdown change shows a toast; DONE without assignee is rejected", "Add two comments quickly one after another: both appear, count shows 2", "Author can delete own comment; a member cannot delete someone else's (no delete link)", "Member cannot delete a task they did not report (error toast)"], "hints": ["Adding comments quickly is a deliberate race-condition check; wait for each comment to render"], "points": 5, "priority": "High", "sprint": 3, "labels": ["ui"]}, {"key": "PW-114", "epic": "PW", "title": "Tasks list: search, filters, URL state, pagination", "story": "As a user, I want to find tasks fast and share filtered links.", "ac": ["Search by text and by key", "Project + priority filters combine correctly and survive a page reload", "Deep link /tasks?projectId=…&overdue=true shows only overdue open tasks, highlighted red", "With 12 tasks in a project: \"Page 1 of 2 · 12 total\", 10 rows, Next works, then disabled"], "hints": [], "points": 5, "priority": "Medium", "sprint": 4, "labels": ["ui"]}, {"key": "PW-115", "epic": "PW", "title": "Admin & RBAC in the UI", "story": "As an admin, I want to manage users; as a non-admin I must not see admin features.", "ac": ["Admin changes a fresh user's role to MANAGER and deactivates them; the user can no longer log in (check via API)", "Admin's own row: role select disabled, no deactivate button", "Manager and member: Users/Audit log nav hidden; /admin/users shows \"Access denied\"", "Audit log shows \"created project <KEY>\" after you create one"], "hints": ["Register the fresh user via the API in the test; never change the seeded accounts"], "points": 5, "priority": "High", "sprint": 4, "labels": ["ui", "rbac"]}, {"key": "PW-116", "epic": "PW", "title": "End-to-end journey across three roles", "story": "As the business, I want the full workflow to work across roles: plan → work → review → audit.", "ac": ["Manager creates project, adds member, creates an assigned task (UI)", "Member opens it from the dashboard, moves it to IN_PROGRESS then IN_REVIEW, comments", "Manager drags it to DONE on the board", "Admin sees the move and comment in the audit log", "Each role runs in its own browser context; uses test.step for readable reports"], "hints": ["browser.newContext({ storageState }) per role"], "points": 8, "priority": "High", "sprint": 4, "labels": ["e2e"]}, {"key": "PW-117", "epic": "PW", "title": "Visual regression and accessibility", "story": "As a QA engineer, I want visual and a11y checks so that layout breaks and a11y issues are caught.", "ac": ["toHaveScreenshot baselines for login, dashboard and board (dynamic data masked)", "@axe-core/playwright scan on login, dashboard and a project board; no critical violations, or each one is documented as a bug in qa/bugs/"], "hints": ["Mask dates and counts with the mask option to avoid false failures"], "points": 5, "priority": "Low", "sprint": 5, "labels": ["visual", "a11y"]}, {"key": "PW-118", "epic": "PW", "title": "Network mocking: graceful failures", "story": "As a QA engineer, I want to see how the UI behaves when the API fails.", "ac": ["page.route makes /dashboard/stats return 500 → \"Could not load dashboard\" shown", "A slow (3 s) projects response shows the loading spinner first", "A failing status change on the board rolls the card back"], "hints": [], "points": 3, "priority": "Low", "sprint": 5, "labels": ["ui", "mocking"]}, {"key": "SJ-201", "epic": "SJ", "title": "Maven + Selenium 4 + TestNG project skeleton", "story": "As an SDET, I want a standard Java framework layout that interviewers recognise.", "ac": ["tests/selenium-java Maven project: Selenium 4, TestNG, AssertJ (or TestNG asserts)", "src/main for framework code, src/test for tests", "config.properties for baseUrl, browser and timeouts, overridable with -D system properties", "mvn test runs a smoke test that opens the login page"], "hints": ["Selenium Manager (built into Selenium 4) downloads drivers for you"], "points": 3, "priority": "High", "sprint": 5, "labels": ["setup", "java"]}, {"key": "SJ-202", "epic": "SJ", "title": "Thread-safe DriverFactory and BaseTest", "story": "As an SDET, I want one driver per thread so that tests can run in parallel safely.", "ac": ["DriverFactory using ThreadLocal<WebDriver> for Chrome, Firefox and Edge (headless option)", "BaseTest with @BeforeMethod/@AfterMethod creating and quitting the driver", "No implicit waits mixed with explicit waits"], "hints": ["Interviewers often ask why ThreadLocal; be ready to explain"], "points": 3, "priority": "High", "sprint": 5, "labels": ["framework", "java"]}, {"key": "SJ-203", "epic": "SJ", "title": "Page objects + explicit-wait helpers", "story": "As an SDET, I want page classes and a wait utility so that tests are readable and stable.", "ac": ["LoginPage, DashboardPage, ProjectsPage, ProjectBoardPage classes", "A WaitUtils/ElementActions class wrapping WebDriverWait (visible, clickable, text present)", "Locators use data-testid via CSS ([data-testid=\"…\"]); no absolute XPath"], "hints": ["Choose By locators or PageFactory @FindBy, and be able to justify the choice"], "points": 5, "priority": "High", "sprint": 5, "labels": ["pom", "java"]}, {"key": "SJ-204", "epic": "SJ", "title": "Data-driven login tests (DataProvider + Excel)", "story": "As an SDET, I want login scenarios driven from external data.", "ac": ["@DataProvider reading qa test data from an Excel or CSV file (Apache POI or OpenCSV)", "Valid logins for 3 roles and at least 4 invalid cases with expected messages", "Test names in the report show the data row"], "hints": [], "points": 5, "priority": "High", "sprint": 5, "labels": ["data-driven", "java"]}, {"key": "SJ-205", "epic": "SJ", "title": "Projects and tasks UI flows", "story": "As a manager, I want the core flows automated in Java too.", "ac": ["Create project via modal and verify key/title on the board", "Create a task with priority, assignee and labels", "Search filters project cards; archive hides \"New task\""], "hints": [], "points": 5, "priority": "Medium", "sprint": 6, "labels": ["ui", "java"]}, {"key": "SJ-206", "epic": "SJ", "title": "Kanban drag & drop in Selenium", "story": "As an SDET, I want to move cards on the board and learn why HTML5 drag & drop is hard in Selenium.", "ac": ["Attempt Actions.dragAndDrop and document what happens in the README", "Make it work (e.g. a JavaScript drag-event helper) and verify the card in the new column", "Also cover the \"Move to\" dropdown path"], "hints": ["Search \"Selenium HTML5 drag and drop\" and read why; this is a classic interview question"], "points": 5, "priority": "Medium", "sprint": 6, "labels": ["ui", "kanban", "java"]}, {"key": "SJ-207", "epic": "SJ", "title": "Listeners: screenshots, logs and retry", "story": "As an SDET, I want evidence on failure and a controlled retry.", "ac": ["ITestListener saves a screenshot on failure, named after the test", "Log4j2 (or SLF4J) logging of each step", "IRetryAnalyzer retries a failed test once at most, and the report shows it"], "hints": [], "points": 3, "priority": "Medium", "sprint": 6, "labels": ["reporting", "java"]}, {"key": "SJ-208", "epic": "SJ", "title": "Reporting with Allure or ExtentReports", "story": "As a lead, I want a readable HTML report.", "ac": ["Allure or Extent report generated after mvn test", "Report shows steps, screenshots on failure, environment info (browser, baseUrl)"], "hints": [], "points": 3, "priority": "Medium", "sprint": 6, "labels": ["reporting", "java"]}, {"key": "SJ-209", "epic": "SJ", "title": "Parallel and cross-browser runs (testng.xml)", "story": "As an SDET, I want suites that run in parallel on several browsers.", "ac": ["testng.xml suites: smoke and regression (by groups)", "parallel=\"methods\" (or classes) with thread-count 3, all green", "Browser passed as a TestNG parameter; Chrome and Firefox both pass"], "hints": [], "points": 3, "priority": "Medium", "sprint": 6, "labels": ["parallel", "java"]}, {"key": "SJ-210", "epic": "SJ", "title": "Selenium Grid with Docker", "story": "As an SDET, I want to run tests on a Grid like enterprise teams do.", "ac": ["docker-compose for Selenium Grid 4 (hub + chrome + firefox nodes)", "RemoteWebDriver used when -Dgrid=true", "README shows the Grid UI screenshot with sessions running"], "hints": [], "points": 5, "priority": "Low", "sprint": 7, "labels": ["grid", "docker", "java"]}, {"key": "SJ-211", "epic": "SJ", "title": "RestAssured API framework: auth + projects", "story": "As an SDET, I want Java API tests that match what banks and service companies use.", "ac": ["RestAssured with RequestSpecBuilder (base URI, JSON, auth token)", "POJOs for request/response (Jackson); login, register, projects CRUD", "Negative cases: 401, 403, 404, 409, 400 with message checks"], "hints": [], "points": 8, "priority": "High", "sprint": 7, "labels": ["api", "java"]}, {"key": "SJ-212", "epic": "SJ", "title": "RestAssured: tasks rules + JSON schema validation", "story": "As an SDET, I want the business rules and contracts covered in Java.", "ac": ["Assignee-before-DONE rule, label normalisation, sequential keys", "json-schema-validator against schemas you write for Task and Error", "Response time assertion on /health (< 2 s)"], "hints": [], "points": 5, "priority": "Medium", "sprint": 7, "labels": ["api", "contract", "java"]}, {"key": "SJ-213", "epic": "SJ", "title": "Database validation with JDBC", "story": "As an SDET, I want to verify that API actions really changed the database.", "ac": ["After creating a task via API, query PostgreSQL (tasks table) and assert the row", "After deleting a project, assert its tasks are gone (cascade)", "DB credentials from config, never hard-coded"], "hints": ["Table names: users, projects, project_members, tasks, comments, activity_logs"], "points": 3, "priority": "Low", "sprint": 7, "labels": ["sql", "java"]}, {"key": "PY-301", "epic": "PY", "title": "pytest project with requests API client", "story": "As an SDET, I want a Python API suite because many product and AI companies hire for Python.", "ac": ["tests/python with pyproject.toml or requirements.txt, pytest, requests", "conftest.py fixtures: base_url, api_client (session with token), per-role clients", "Health and login tests pass"], "hints": [], "points": 3, "priority": "High", "sprint": 8, "labels": ["setup", "python", "api"]}, {"key": "PY-302", "epic": "PY", "title": "Parametrized auth and projects API tests", "story": "As an SDET, I want data-driven API tests in idiomatic pytest.", "ac": ["@pytest.mark.parametrize for weak passwords and invalid project keys", "RBAC matrix test: one parametrized test over (role, endpoint, expected status)", "Fixtures with yield clean up created projects"], "hints": [], "points": 5, "priority": "High", "sprint": 8, "labels": ["api", "python", "rbac"]}, {"key": "PY-303", "epic": "PY", "title": "Response validation with Pydantic", "story": "As an SDET, I want typed models so that contract drift is caught.", "ac": ["Pydantic models for Task, Project, Error; responses parsed in tests", "A model with extra=\"forbid\" for User catches leaked fields"], "hints": [], "points": 3, "priority": "Medium", "sprint": 8, "labels": ["contract", "python"]}, {"key": "PY-304", "epic": "PY", "title": "UI tests with Playwright for Python (or Selenium Python)", "story": "As an SDET, I want Python UI tests with page objects.", "ac": ["pytest-playwright (or Selenium) with page objects for Login and Project board", "Login per role and create-task-on-board tests", "Screenshots on failure"], "hints": [], "points": 5, "priority": "Medium", "sprint": 8, "labels": ["ui", "python"]}, {"key": "PY-305", "epic": "PY", "title": "Parallel runs, markers and Allure", "story": "As an SDET, I want fast, filterable, reportable runs.", "ac": ["pytest-xdist: suite passes with -n 4", "Custom markers smoke/regression registered in pytest.ini", "allure-pytest report with steps"], "hints": [], "points": 3, "priority": "Medium", "sprint": 9, "labels": ["parallel", "reporting", "python"]}, {"key": "PY-306", "epic": "PY", "title": "Database checks with psycopg", "story": "As an SDET, I want SQL assertions in Python.", "ac": ["Fixture opening a PostgreSQL connection from env vars", "Assert label normalisation and task key numbering directly in the tasks table"], "hints": [], "points": 3, "priority": "Low", "sprint": 9, "labels": ["sql", "python"]}, {"key": "CY-401", "epic": "CY", "title": "Cypress project setup", "story": "As an SDET, I want Cypress configured for this app.", "ac": ["tests/cypress with cypress.config (baseUrl, env apiUrl)", "Smoke spec: login page loads", "README with open/run commands"], "hints": [], "points": 2, "priority": "High", "sprint": 9, "labels": ["setup", "cypress"]}, {"key": "CY-402", "epic": "CY", "title": "Custom commands: cy.login via API with cy.session", "story": "As an SDET, I want fast, cached logins per role.", "ac": ["cy.login(role) calls the API, stores the token in localStorage and caches it with cy.session", "cy.createProject / cy.createTask commands using cy.request", "Data-testid helper command, e.g. cy.getByTestId"], "hints": ["The token key in localStorage is taskflow.token"], "points": 3, "priority": "High", "sprint": 9, "labels": ["framework", "cypress"]}, {"key": "CY-403", "epic": "CY", "title": "UI flows: projects, board, task detail", "story": "As a user, I want the main flows covered in Cypress.", "ac": ["Create project and task; edit task; add comment", "Unassigned task to DONE shows the error toast", "Tasks filters persist after reload"], "hints": [], "points": 5, "priority": "Medium", "sprint": 10, "labels": ["ui", "cypress"]}, {"key": "CY-404", "epic": "CY", "title": "cy.intercept: wait on and stub network calls", "story": "As an SDET, I want to control and observe the network.", "ac": ["Wait on the PATCH /tasks/*/status request after moving a card and assert its payload", "Stub /dashboard/stats with a fixture and verify the KPI numbers render", "Force a 500 and verify the error state"], "hints": [], "points": 3, "priority": "Medium", "sprint": 10, "labels": ["mocking", "cypress"]}, {"key": "CY-405", "epic": "CY", "title": "Kanban drag & drop in Cypress", "story": "As an SDET, I want to handle HTML5 drag & drop the Cypress way.", "ac": ["Move a card between columns (trigger dragstart/drop with a DataTransfer, or a plugin)", "Document the approach in the README"], "hints": [], "points": 3, "priority": "Low", "sprint": 10, "labels": ["kanban", "cypress"]}, {"key": "CY-406", "epic": "CY", "title": "API tests with cy.request + Mochawesome report", "story": "As an SDET, I want API checks and a shareable report from Cypress.", "ac": ["Auth and tasks API negative cases with failOnStatusCode: false", "Mochawesome (or cypress-mochawesome-reporter) HTML report with screenshots"], "hints": [], "points": 3, "priority": "Low", "sprint": 10, "labels": ["api", "reporting", "cypress"]}, {"key": "RF-501", "epic": "RF", "title": "Robot Framework setup with Browser or SeleniumLibrary", "story": "As an SDET, I want a keyword-driven suite.", "ac": ["tests/robot with requirements.txt (robotframework, robotframework-browser or SeleniumLibrary, RequestsLibrary)", "resources/ for keywords and variables; suites/ for tests", "robot suites/ runs a login smoke test"], "hints": [], "points": 3, "priority": "Medium", "sprint": 11, "labels": ["setup", "robot"]}, {"key": "RF-502", "epic": "RF", "title": "Business-readable keywords", "story": "As a BA, I want tests I can read without code knowledge.", "ac": ["Keywords like \"Login As Manager\", \"Create Project With Key\", \"Move Task To Column\"", "Login and create-project suites written only with those keywords"], "hints": [], "points": 3, "priority": "Medium", "sprint": 11, "labels": ["bdd", "robot"]}, {"key": "RF-503", "epic": "RF", "title": "Data-driven tests with Test Templates", "story": "As an SDET, I want table-driven negative tests.", "ac": ["Test Template for invalid login and invalid project key rows (at least 6 rows)"], "hints": [], "points": 2, "priority": "Medium", "sprint": 11, "labels": ["data-driven", "robot"]}, {"key": "RF-504", "epic": "RF", "title": "API tests with RequestsLibrary", "story": "As an SDET, I want API checks in Robot.", "ac": ["Session with base URL; login keyword returns a token", "Projects CRUD and a 403 RBAC case"], "hints": [], "points": 3, "priority": "Medium", "sprint": 11, "labels": ["api", "robot"]}, {"key": "RF-505", "epic": "RF", "title": "Tags, Pabot parallel runs and reports", "story": "As a lead, I want smoke vs regression runs and fast execution.", "ac": ["[Tags] smoke / regression; robot --include smoke works", "pabot runs suites in parallel; log.html and report.html attached to the story"], "hints": [], "points": 2, "priority": "Low", "sprint": 11, "labels": ["parallel", "robot"]}, {"key": "WD-601", "epic": "WD", "title": "WebdriverIO + Mocha setup", "story": "As an SDET, I want a JavaScript Selenium-family framework.", "ac": ["tests/webdriverio created with the WDIO CLI (Mocha, spec + Allure reporters)", "baseUrl from env; smoke login test passes"], "hints": [], "points": 2, "priority": "Medium", "sprint": 12, "labels": ["setup", "javascript"]}, {"key": "WD-602", "epic": "WD", "title": "Page objects and login + board flows", "story": "As an SDET, I want readable WDIO tests.", "ac": ["Page objects for Login, Projects and Board", "Login per role; create task; move it with the \"Move to\" dropdown"], "hints": [], "points": 5, "priority": "Medium", "sprint": 12, "labels": ["pom", "javascript"]}, {"key": "WD-603", "epic": "WD", "title": "API tests with Jest + Supertest (or axios)", "story": "As an SDET, I want a lightweight JS API suite.", "ac": ["tests/webdriverio/api (or a separate package) with Jest", "Auth, projects and tasks positive and negative tests; beforeAll gets tokens"], "hints": [], "points": 5, "priority": "Medium", "sprint": 12, "labels": ["api", "javascript"]}, {"key": "WD-604", "epic": "WD", "title": "Allure report and parallel capabilities", "story": "As a lead, I want parallel runs and a report.", "ac": ["maxInstances > 1 with all tests green", "Allure report generated after a run"], "hints": [], "points": 2, "priority": "Low", "sprint": 12, "labels": ["reporting", "javascript"]}, {"key": "PM-701", "epic": "PM", "title": "Postman collection from OpenAPI", "story": "As a QA engineer, I want a Postman collection so that I can explore and share API checks.", "ac": ["Import /api/docs-json into Postman; organise folders per module", "Environment with baseUrl; a login request saves the token into an environment variable via a test script", "Collection-level Authorization uses that token"], "hints": [], "points": 2, "priority": "High", "sprint": 2, "labels": ["api", "postman"]}, {"key": "PM-702", "epic": "PM", "title": "Assertions and chaining in Postman", "story": "As a QA engineer, I want requests that verify themselves.", "ac": ["pm.test assertions for status, body fields and response time on at least 15 requests", "Create project → create task → move status → delete project chained with variables", "Negative requests for 400/401/403/404/409"], "hints": [], "points": 3, "priority": "High", "sprint": 2, "labels": ["api", "postman"]}, {"key": "PM-703", "epic": "PM", "title": "Run with Newman + HTML report", "story": "As a lead, I want the collection running from the command line.", "ac": ["Exported collection and environment JSON in tests/postman", "newman run with htmlextra reporter; report attached to the story", "A data file (CSV/JSON) drives one request with multiple iterations"], "hints": [], "points": 2, "priority": "Medium", "sprint": 3, "labels": ["api", "postman", "ci"]}, {"key": "TO-801", "epic": "TO", "title": "Tosca workspace and module scanning", "story": "As a test automation engineer, I want Tosca set up because many enterprise clients use it.", "ac": ["Tosca Commander installed (free trial / Tricentis Academy licence) with a workspace for TaskFlow", "XScan modules for Login, Dashboard, Projects and the task form, using data-testid where possible", "Screenshots of the module tree in tests/tosca"], "hints": ["Tosca needs Windows and a licence; Tricentis Academy courses come with a trial"], "points": 3, "priority": "Low", "sprint": 13, "labels": ["tosca"]}, {"key": "TO-802", "epic": "TO", "title": "Test cases with TestStepValues and verification", "story": "As a test automation engineer, I want model-based test cases.", "ac": ["Login test cases for 3 roles with verify steps on name and role badge", "Create-project test case with a verification of the key on the board"], "hints": [], "points": 3, "priority": "Low", "sprint": 13, "labels": ["tosca"]}, {"key": "TO-803", "epic": "TO", "title": "Test Case Design (data-driven) and templates", "story": "As a test automation engineer, I want TCD-driven instances.", "ac": ["TestSheet with attributes/instances for login (valid + invalid)", "Template test case instantiated from the sheet"], "hints": [], "points": 5, "priority": "Low", "sprint": 13, "labels": ["tosca", "data-driven"]}, {"key": "TO-804", "epic": "TO", "title": "API Scan and execution lists", "story": "As a test automation engineer, I want API tests and organised runs in Tosca.", "ac": ["API Scan imports the OpenAPI spec; login + projects API tests", "Execution list with results exported (screenshots or report) to tests/tosca"], "hints": [], "points": 3, "priority": "Low", "sprint": 13, "labels": ["tosca", "api"]}, {"key": "CI-901", "epic": "CI", "title": "GitHub Actions: run Playwright on every PR", "story": "As a team, we want tests to run automatically on every pull request.", "ac": ["Workflow starts PostgreSQL as a service, builds and starts API + web, migrates and seeds", "Waits for /health and /login before tests (no fixed sleep)", "Runs the Playwright suite; uploads the HTML report and traces as artifacts", "Fails the PR when tests fail"], "hints": ["The existing ci.yml shows how to install pnpm and build the apps"], "points": 5, "priority": "High", "sprint": 4, "labels": ["ci", "github-actions"]}, {"key": "CI-902", "epic": "CI", "title": "Publish the report to GitHub Pages: your public link", "story": "As a job seeker, I want a public test-report link for my resume.", "ac": ["On main, the HTML report is deployed to GitHub Pages", "The README badge and link point to it"], "hints": [], "points": 3, "priority": "High", "sprint": 4, "labels": ["ci", "reporting"]}, {"key": "CI-903", "epic": "CI", "title": "Sharding and a merged report", "story": "As a lead, I want faster pipelines.", "ac": ["Matrix of 2 shards; blob reports merged into one HTML + JUnit report", "Test summary shown on the Actions run page"], "hints": [], "points": 3, "priority": "Medium", "sprint": 5, "labels": ["ci", "parallel"]}, {"key": "CI-904", "epic": "CI", "title": "Nightly smoke against the deployed app", "story": "As a product owner, I want production checked every night.", "ac": ["Scheduled workflow (02:00 IST) runs @smoke tests with BASE_URL/API_URL from repo variables", "Wakes the sleeping free-tier API first", "Manual trigger with an environment input"], "hints": [], "points": 3, "priority": "Medium", "sprint": 5, "labels": ["ci", "monitoring"]}, {"key": "CI-905", "epic": "CI", "title": "Jenkins pipeline for the Java suite", "story": "As an SDET, I want Jenkins experience because many Indian enterprises still use it.", "ac": ["Jenkins in Docker; Jenkinsfile with checkout → mvn test → publish TestNG/Allure results", "Parameter for browser and suite (smoke/regression)", "Screenshot of a green build in tests/selenium-java/docs"], "hints": [], "points": 5, "priority": "Medium", "sprint": 7, "labels": ["ci", "jenkins", "java"]}, {"key": "CI-906", "epic": "CI", "title": "One pipeline, many stacks", "story": "As a lead, I want every suite you built running in CI.", "ac": ["Matrix job (or separate jobs) for Python, Cypress, Robot and Newman suites", "Each publishes its report as an artifact; a summary job links them"], "hints": [], "points": 5, "priority": "Low", "sprint": 12, "labels": ["ci"]}, {"key": "NF-951", "epic": "NF", "title": "Load test with k6", "story": "As a QA engineer, I want to know how the API behaves under load.", "ac": ["k6 script: login once, then 20 VUs for 1 minute on GET /tasks and GET /dashboard/stats", "Thresholds: p95 < 500 ms, error rate < 1%", "Results summary in tests/performance/README.md"], "hints": ["Raise THROTTLE_LIMIT for the run, otherwise you are testing the rate limiter"], "points": 3, "priority": "Low", "sprint": 13, "labels": ["performance"]}, {"key": "NF-952", "epic": "NF", "title": "Security checks: OWASP ZAP baseline + IDOR", "story": "As a QA engineer, I want basic security coverage.", "ac": ["ZAP baseline scan against the local web app; findings triaged in qa/bugs", "API test: member uses another project's task id → 403 (IDOR)", "API test: login endpoint returns 429 after exceeding the limit"], "hints": [], "points": 5, "priority": "Low", "sprint": 13, "labels": ["security"]}, {"key": "AI-991", "epic": "AI", "title": "Spike: design the AI assistant and its test strategy", "story": "As a QA engineer moving into AI testing, I want a plan before building.", "ac": ["One-page design: RAG over project docs, tools it may call, risks (hallucination, prompt injection, PII)", "Test strategy: golden dataset, metrics, thresholds, tools (Promptfoo, DeepEval/Ragas)"], "hints": [], "points": 3, "priority": "Low", "sprint": 14, "labels": ["ai", "spike"]}, {"key": "AI-992", "epic": "AI", "title": "Eval suite with Promptfoo in CI", "story": "As a QA engineer, I want automated LLM quality gates.", "ac": ["30-question golden dataset with expected facts", "Promptfoo assertions (contains, llm-rubric, similarity); CI fails below threshold"], "hints": [], "points": 5, "priority": "Low", "sprint": 14, "labels": ["ai"]}, {"key": "AI-993", "epic": "AI", "title": "Red-team and safety tests", "story": "As a QA engineer, I want the assistant to resist abuse.", "ac": ["Prompt-injection and data-leak test cases; pass rate reported", "Documented findings as bug reports"], "hints": [], "points": 5, "priority": "Low", "sprint": 14, "labels": ["ai", "security"]}, {"key": "PW-119", "epic": "PW", "title": "Guest API is read-only", "story": "As the product owner, I want guests to be unable to change anything so that the public demo stays clean.", "ac": ["POST /auth/guest returns 200 with a JWT whose user has role GUEST; the guest cannot log in with a password (401)", "Guest GET /projects, /tasks, /dashboard/stats return 200, and the guest sees every project (more than the member sees)", "Data-driven: at least 10 write endpoints (create/update/delete project, task, status, comment, members, profile, change password) each return 403 with \"Guest accounts are read-only…\"", "Guest GET /users and GET /activity return 403", "After the run, nothing a guest attempted exists in the data (verify through an admin token)"], "hints": ["One parametrized test over a table of [method, path, body] keeps this short", "Compare the guest's project count with the member's"], "points": 5, "priority": "High", "sprint": 3, "labels": ["api", "rbac", "guest"]}, {"key": "PW-120", "epic": "PW", "title": "Guest mode in the UI", "story": "As a visitor, I want to explore the app without signing up, and I must not see controls I cannot use.", "ac": ["\"Continue as guest\" lands on the dashboard with the GUEST badge and the \"Guest mode\" banner", "No New project, New task or column \"+\" buttons; cards are not draggable and have no \"Move to\" dropdown; no Settings tab", "Task detail: no Edit/Delete, status dropdown disabled, comment box replaced by a note", "Profile forms are disabled; Users/Audit log nav hidden", "\"Create a free account\" in the banner logs the guest out and opens Register"], "hints": ["Add a storageState for the guest role in your setup project"], "points": 5, "priority": "High", "sprint": 4, "labels": ["ui", "rbac", "guest"]}, {"key": "PY-307", "epic": "PY", "title": "Guest write-protection matrix in pytest", "story": "As an SDET, I want the guest rule checked in Python too so that I can compare the approach with Playwright.", "ac": ["Fixture that gets a guest token via POST /auth/guest", "@pytest.mark.parametrize over every write endpoint; each returns 403 with the guest message", "Readable test IDs (ids=…) so the report shows each endpoint"], "hints": [], "points": 2, "priority": "Medium", "sprint": 8, "labels": ["api", "python", "guest"]}];
+const EPICS = {
+  QA: { name: 'QA foundation', folder: 'qa/' },
+  PW: { name: 'Playwright + TypeScript', folder: 'tests/playwright-ts/' },
+  SJ: { name: 'Selenium + Java + TestNG', folder: 'tests/selenium-java/' },
+  PY: { name: 'Python', folder: 'tests/python/' },
+  CY: { name: 'Cypress', folder: 'tests/cypress/' },
+  RF: { name: 'Robot Framework', folder: 'tests/robot/' },
+  WD: { name: 'JavaScript · WebdriverIO', folder: 'tests/webdriverio/' },
+  PM: { name: 'Postman + Newman', folder: 'tests/postman/' },
+  TO: { name: 'Tricentis Tosca', folder: 'tests/tosca/' },
+  CI: { name: 'CI/CD pipelines', folder: '.github/workflows/' },
+  NF: { name: 'Performance & security', folder: 'tests/performance/' },
+  AI: { name: 'Phase 2 · AI testing', folder: 'ai/' },
+};
+const STATUSES = [['todo','To Do'],['in_progress','In Progress'],['in_review','In Review'],['changes_requested','Changes Requested'],['done','Done']];
+const SL = Object.fromEntries(STATUSES);
+const PRIORITIES = ['Highest','High','Medium','Low'];
+const PRIO_RANK = Object.fromEntries(PRIORITIES.map((p, i) => [p, i]));
+const STORE = 'taskflow-tracker-v1';
+const CAPACITY = 30; // story points per 2-week sprint (part-time solo pace); the bar turns red above this
+
+// ---------- state & persistence ----------
+let db = load();
+const ui = { view: 'status', epic: '', sprint: '', status: '', q: '', open: null, sort: 'key', dragKey: null };
+try { Object.assign(ui, JSON.parse(localStorage.getItem(STORE + '-ui') || '{}'), { open: null, dragKey: null }); } catch {}
+
+function fresh() {
+  const max = Math.max(...SEED.map((s) => s.sprint));
+  return { version: 1, sprints: Array.from({ length: max }, (_, i) => i + 1),
+    stories: SEED.map((s) => ({ ...s, status: 'todo', acDone: [], codeLocation: '', devNotes: '', reviews: [] })) };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && Array.isArray(d.stories)) return mergeNewSeed(d);
+    }
+  } catch {}
+  return fresh();
+}
+/** When a newer tracker file adds stories, add them to saved progress without touching existing tickets. */
+function mergeNewSeed(d) {
+  const have = new Set(d.stories.map((s) => s.key));
+  const added = SEED.filter((s) => !have.has(s.key)).map((s) => ({ ...s, status: 'todo', acDone: [], codeLocation: '', devNotes: '', reviews: [] }));
+  if (added.length) {
+    d.stories.push(...added);
+    d.sprints = [...new Set([...(d.sprints || []), ...added.map((s) => s.sprint).filter((n) => n > 0)])].sort((a, b) => a - b);
+    setTimeout(() => toast(`${added.length} new ${added.length > 1 ? 'stories' : 'story'} added from the latest backlog: ${added.map((s) => s.key).join(', ')}`), 300);
+    try { localStorage.setItem(STORE, JSON.stringify(d)); } catch {}
+  }
+  return d;
+}
+function persist() { try { localStorage.setItem(STORE, JSON.stringify(db)); } catch {} }
+function persistUi() { try { localStorage.setItem(STORE + '-ui', JSON.stringify({ view: ui.view, epic: ui.epic, sprint: ui.sprint, status: ui.status, sort: ui.sort })); } catch {} }
+function commit(msg) { persist(); render(); if (msg) toast(msg); }
+
+// ---------- helpers ----------
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === false || v == null) continue;
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else if (k === 'value') n.value = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? '' : v);
+  }
+  kids.flat().forEach((c) => c != null && c !== false && n.append(c));
+  return n;
+}
+const cvar = (e) => `--c: var(--e-${e}, var(--muted))`;
+const find = (key) => db.stories.find((s) => s.key === key);
+const pts = (list) => list.reduce((n, s) => n + (Number(s.points) || 0), 0);
+const sprintName = (n) => (n === 0 ? 'Backlog' : `Sprint ${n}`);
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), msg.length > 60 ? 5000 : 2200); }
+function sortStories(list) {
+  const by = { key: (a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }),
+    priority: (a, b) => PRIO_RANK[a.priority] - PRIO_RANK[b.priority] || a.key.localeCompare(b.key, undefined, { numeric: true }),
+    points: (a, b) => b.points - a.points, sprint: (a, b) => a.sprint - b.sprint || a.key.localeCompare(b.key, undefined, { numeric: true }),
+    status: (a, b) => STATUSES.findIndex(([k]) => k === a.status) - STATUSES.findIndex(([k]) => k === b.status) };
+  return [...list].sort(by[ui.sort] || by.key);
+}
+function filtered() {
+  return db.stories.filter((s) => (!ui.epic || s.epic === ui.epic) && (ui.sprint === '' || String(s.sprint) === ui.sprint) &&
+    (!ui.status || s.status === ui.status) &&
+    (!ui.q || [s.key, s.title, (s.labels || []).join(' '), s.story].join(' ').toLowerCase().includes(ui.q)));
+}
+
+// ---------- toolbar ----------
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => { ui.view = b.dataset.view; persistUi(); render(); }));
+$('f-sprint').addEventListener('change', (e) => { ui.sprint = e.target.value; persistUi(); render(); });
+$('f-status').addEventListener('change', (e) => { ui.status = e.target.value; persistUi(); render(); });
+$('q').addEventListener('input', (e) => { ui.q = e.target.value.toLowerCase(); render(); });
+$('new-story').addEventListener('click', newStory);
+$('add-sprint').addEventListener('click', () => { const n = Math.max(0, ...db.sprints) + 1; db.sprints.push(n); ui.view = 'sprint'; persistUi(); commit(`Sprint ${n} added`); });
+$('export').addEventListener('click', exportDialog);
+$('import').addEventListener('click', importDialog);
+$('reset').addEventListener('click', () => confirmDialog('Reset to the default backlog?', 'All statuses, edits, new stories and reviews in this browser will be lost. Export first if you want to keep them.', 'Reset', () => { db = fresh(); commit('Backlog reset'); }));
+$('scrim').addEventListener('mousedown', (e) => { if (e.target === $('scrim')) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('scrim').hidden) closeModal(); });
+
+// ---------- render ----------
+function render() {
+  const all = db.stories;
+  const done = all.filter((s) => s.status === 'done');
+  const flight = all.filter((s) => !['todo', 'done'].includes(s.status));
+  const open = all.filter((s) => s.status !== 'done' && s.sprint > 0);
+  const current = open.length ? Math.min(...open.map((s) => s.sprint)) : null;
+  $('stats').replaceChildren(
+    el('div', { class: 'stat' }, el('b', { text: `${pts(done)}/${pts(all)}` }), el('span', { text: 'story points done' })),
+    el('div', { class: 'stat' }, el('b', { text: `${done.length}/${all.length}` }), el('span', { text: 'stories done' })),
+    el('div', { class: 'stat' }, el('b', { text: String(flight.length) }), el('span', { text: 'in flight' })),
+    el('div', { class: 'stat' }, el('b', { text: current ? `S${current}` : '—' }), el('span', { text: 'current sprint' })));
+  const total = pts(all) || 1;
+  $('progress').replaceChildren(...[['done', '--done'], ['in_review', '--rev'], ['changes_requested', '--chg'], ['in_progress', '--prog']].map(([k, v]) =>
+    el('i', { style: `width:${(pts(all.filter((s) => s.status === k)) / total) * 100}%;background:var(${v})` })));
+
+  document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === ui.view)));
+  $('f-sprint').replaceChildren(el('option', { value: '', text: 'All sprints' }), el('option', { value: '0', text: 'Backlog (unplanned)' }),
+    ...db.sprints.map((n) => el('option', { value: String(n), text: `Sprint ${n}` })));
+  $('f-sprint').value = ui.sprint;
+  $('f-status').replaceChildren(el('option', { value: '', text: 'All statuses' }), ...STATUSES.map(([k, l]) => el('option', { value: k, text: l })));
+  $('f-status').value = ui.status;
+  $('epics').replaceChildren(...Object.entries(EPICS).filter(([k]) => all.some((s) => s.epic === k)).map(([k, e]) => {
+    const list = all.filter((s) => s.epic === k);
+    return el('button', { class: 'chip', type: 'button', style: cvar(k), 'aria-pressed': String(ui.epic === k),
+      onclick: () => { ui.epic = ui.epic === k ? '' : k; persistUi(); render(); } },
+      el('span', { class: 'dot' }), e.name, el('span', { class: 'n', text: `${list.filter((s) => s.status === 'done').length}/${list.length}` }));
+  }));
+  const list = filtered();
+  $('view').replaceChildren(ui.view === 'sprint' ? sprintBoard(list) : ui.view === 'list' ? listView(list) : statusBoard(list));
+}
+
+function card(s, showSprint) {
+  const latest = (s.reviews || []).at(-1);
+  const acPct = s.ac?.length ? Math.round(((s.acDone || []).length / s.ac.length) * 100) : 0;
+  return el('article', { class: 'card', style: cvar(s.epic), draggable: 'true', tabindex: '0', 'data-key': s.key, 'aria-label': `${s.key}: ${s.title}`,
+    ondragstart: (e) => { ui.dragKey = s.key; e.dataTransfer.setData('text/plain', s.key); e.dataTransfer.effectAllowed = 'move'; e.currentTarget.classList.add('dragging'); },
+    ondragend: (e) => { e.currentTarget.classList.remove('dragging'); ui.dragKey = null; },
+    onclick: () => openStory(s.key), onkeydown: (e) => { if (e.key === 'Enter') openStory(s.key); } },
+    el('div', { class: 't', text: s.title }),
+    s.ac?.length ? el('div', { class: 'acbar', title: `${acPct}% of acceptance criteria done` }, el('i', { style: `width:${acPct}%` })) : null,
+    el('div', { class: 'row' },
+      el('span', { class: 'key', text: s.key }),
+      el('span', { style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' },
+        latest ? el('span', { class: `verdict v-${latest.verdict}`, text: latest.verdict === 'approved' ? 'APPROVED' : 'CHANGES' }) : null,
+        showSprint ? el('span', { class: 'mono muted', style: 'font-size:11px', text: s.sprint ? `S${s.sprint}` : 'Backlog' }) : el('span', { class: `status-pill s-${s.status}`, text: SL[s.status] }),
+        el('span', { class: `prio ${s.priority}`, text: s.priority }),
+        el('span', { class: 'pts', text: `${s.points} pt` }))));
+}
+
+function dropColumn(col, onDrop) {
+  col.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; col.classList.add('drop'); });
+  col.addEventListener('dragleave', (e) => { if (!col.contains(e.relatedTarget)) col.classList.remove('drop'); });
+  col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('drop'); const key = e.dataTransfer.getData('text/plain') || ui.dragKey; const s = find(key); if (s) onDrop(s); });
+  return col;
+}
+
+function statusBoard(list) {
+  return el('div', { class: 'cols' }, STATUSES.map(([k, label]) => {
+    const items = sortStories(list.filter((s) => s.status === k));
+    return dropColumn(el('section', { class: 'col', 'aria-label': label },
+      el('div', { class: 'col-head' }, el('h3', {}, label, el('span', { class: `pill s-${k}`, text: String(items.length) })), el('span', { class: 'mono muted', style: 'font-size:11px', text: `${pts(items)} pt` })),
+      items.map((s) => card(s, true)),
+      items.length ? null : el('div', { class: 'empty-col', text: 'Drop tickets here' })),
+      (s) => { if (s.status !== k) { s.status = k; s.updatedAt = new Date().toISOString(); commit(`${s.key} → ${label}`); } });
+  }));
+}
+
+function sprintBoard(list) {
+  const cols = [0, ...db.sprints];
+  return el('div', { class: 'cols sprints' }, cols.map((n) => {
+    const items = sortStories(list.filter((s) => s.sprint === n));
+    const all = db.stories.filter((s) => s.sprint === n);
+    const load = pts(all);
+    const doneP = pts(all.filter((s) => s.status === 'done'));
+    const emptySprint = n > 0 && all.length === 0;
+    return dropColumn(el('section', { class: 'col', 'aria-label': sprintName(n) },
+      el('div', { class: 'col-head' },
+        el('h3', {}, sprintName(n), el('span', { class: 'pill', text: String(items.length) })),
+        el('span', { style: 'display:flex;gap:6px;align-items:center' },
+          el('span', { class: 'mono muted', style: 'font-size:11px', text: n ? `${doneP}/${load} pt` : `${load} pt` }),
+          emptySprint ? el('button', { class: 'x', type: 'button', title: 'Remove empty sprint', 'aria-label': `Remove ${sprintName(n)}`, text: '×',
+            onclick: () => { db.sprints = db.sprints.filter((x) => x !== n); commit(`${sprintName(n)} removed`); } }) : null)),
+      n ? el('div', { class: `cap ${load > CAPACITY ? 'over' : ''}`, title: `${load} of ~${CAPACITY} pt capacity` }, el('i', { style: `width:${Math.min(100, (load / CAPACITY) * 100)}%` })) : null,
+      items.map((s) => card(s, false)),
+      items.length ? null : el('div', { class: 'empty-col', text: n ? 'Drag tickets here to plan them' : 'Unplanned tickets live here' })),
+      (s) => { if (s.sprint !== n) { s.sprint = n; s.updatedAt = new Date().toISOString(); commit(`${s.key} → ${sprintName(n)}`); } });
+  }));
+}
+
+function listView(list) {
+  const cols = [['key', 'Key'], ['title', 'Title'], ['epic', 'Epic'], ['sprint', 'Sprint'], ['status', 'Status'], ['priority', 'Priority'], ['points', 'Pts'], ['ac', 'AC']];
+  return el('div', { class: 'table-wrap' }, el('table', {},
+    el('thead', {}, el('tr', {}, cols.map(([k, l]) => el('th', { scope: 'col', onclick: () => { if (['key', 'sprint', 'status', 'priority', 'points'].includes(k)) { ui.sort = k; persistUi(); render(); } } }, l + (ui.sort === k ? ' ↓' : ''))))),
+    el('tbody', {}, sortStories(list).map((s) => el('tr', { onclick: () => openStory(s.key), style: cvar(s.epic) },
+      el('td', {}, el('span', { class: 'key', text: s.key })), el('td', { class: 'title', text: s.title }),
+      el('td', { class: 'muted', text: EPICS[s.epic]?.name || s.epic }), el('td', { class: 'mono', text: s.sprint ? `S${s.sprint}` : 'Backlog' }),
+      el('td', {}, el('span', { class: `status-pill s-${s.status}`, text: SL[s.status] })), el('td', { class: `prio ${s.priority}`, text: s.priority }),
+      el('td', { class: 'mono', text: String(s.points) }), el('td', { class: 'mono muted', text: `${(s.acDone || []).length}/${(s.ac || []).length}` })))),
+  ));
+}
+
+// ---------- story editor ----------
+function openStory(key) { ui.open = key; showModal(storyPanel(find(key))); }
+function newStory() {
+  const epic = ui.epic || 'PW';
+  const nums = db.stories.filter((s) => s.epic === epic).map((s) => parseInt(s.key.split('-')[1], 10)).filter(Number.isFinite);
+  const key = `${epic}-${nums.length ? Math.max(...nums) + 1 : 1}`;
+  const s = { key, epic, title: 'New story', story: 'As a …, I want … so that …', ac: ['First acceptance criterion'], hints: [], points: 3, priority: 'Medium',
+    sprint: 0, labels: [], status: 'todo', acDone: [], codeLocation: '', devNotes: '', reviews: [], updatedAt: new Date().toISOString() };
+  db.stories.push(s); commit(`${key} created in Backlog`); openStory(key);
+}
+function storyPanel(s) {
+  const e = EPICS[s.epic] || { name: s.epic, folder: '' };
+  const touch = () => { s.updatedAt = new Date().toISOString(); persist(); render(); };
+  const input = (label, value, onchange, attrs = {}) => el('label', { class: 'field' }, label, el('input', { value, ...attrs, onchange: (ev) => { onchange(ev.target.value); touch(); } }));
+  const select = (label, value, options, onchange) => {
+    const sel = el('select', { onchange: (ev) => { onchange(ev.target.value); touch(); refresh(); } }, options.map(([v, l]) => el('option', { value: v, text: l })));
+    sel.value = String(value); return el('label', { class: 'field' }, label, sel);
+  };
+  const refresh = () => { const p = storyPanel(find(s.key)); const box = $('scrim'); const top = box.firstChild?.scrollTop || 0; box.replaceChildren(p); p.scrollTop = top; };
+  const acDone = new Set(s.acDone || []);
+  const reviews = s.reviews || [];
+  return el('aside', { class: 'panel', role: 'dialog', 'aria-modal': 'true', 'aria-label': `${s.key} ${s.title}`, style: cvar(s.epic) },
+    el('div', { class: 'top' },
+      el('div', {}, el('div', { class: 'key', style: 'font-size:13px', text: `${s.key} · ${e.name}` }), el('div', { class: 'muted', style: 'font-size:12px', text: `Code folder: ${e.folder}` })),
+      el('button', { class: 'btn ghost', type: 'button', text: 'Close', onclick: closeModal })),
+    el('label', { class: 'field' }, 'Title', el('textarea', { rows: 2, style: 'font-size:18px;font-weight:600;min-height:0', value: s.title, onchange: (ev) => { s.title = ev.target.value.trim() || s.title; touch(); } })),
+    el('div', { class: 'grid4' },
+      select('Status', s.status, STATUSES, (v) => (s.status = v)),
+      select('Sprint', s.sprint, [[0, 'Backlog'], ...db.sprints.map((n) => [n, `Sprint ${n}`])], (v) => (s.sprint = Number(v))),
+      select('Priority', s.priority, PRIORITIES.map((p) => [p, p]), (v) => (s.priority = v)),
+      select('Story points', s.points, [1, 2, 3, 5, 8, 13].map((p) => [p, String(p)]), (v) => (s.points = Number(v)))),
+    el('div', { class: 'grid2' },
+      select('Epic', s.epic, Object.entries(EPICS).map(([k, v]) => [k, v.name]), (v) => (s.epic = v)),
+      input('Labels (comma separated)', (s.labels || []).join(', '), (v) => (s.labels = v.split(',').map((x) => x.trim()).filter(Boolean)))),
+    el('label', { class: 'field' }, 'User story', el('textarea', { value: s.story, onchange: (ev) => { s.story = ev.target.value; touch(); } })),
+    el('div', { class: 'section' },
+      el('h3', { text: `Acceptance criteria · ${acDone.size}/${(s.ac || []).length} done` }),
+      el('ul', { class: 'ac-list' }, (s.ac || []).map((a, i) => {
+        const cb = el('input', { type: 'checkbox', 'aria-label': `Criterion ${i + 1} done`, onchange: (ev) => {
+          const set = new Set(s.acDone || []); ev.target.checked ? set.add(i) : set.delete(i); s.acDone = [...set].sort((x, y) => x - y); touch(); refresh(); } });
+        cb.checked = acDone.has(i);
+        return el('li', { class: acDone.has(i) ? 'checked' : '' }, cb,
+          el('textarea', { rows: 1, value: a, 'aria-label': `Criterion ${i + 1}`, onchange: (ev) => { s.ac[i] = ev.target.value; touch(); } }),
+          el('button', { class: 'x', type: 'button', text: '×', 'aria-label': `Remove criterion ${i + 1}`, onclick: () => {
+            s.ac.splice(i, 1); s.acDone = (s.acDone || []).filter((x) => x !== i).map((x) => (x > i ? x - 1 : x)); touch(); refresh(); } }));
+      })),
+      el('button', { class: 'btn ghost sm', type: 'button', style: 'margin-top:8px', text: '+ Add criterion', onclick: () => { s.ac = [...(s.ac || []), 'New criterion']; touch(); refresh(); } })),
+    s.hints?.length ? el('details', { class: 'hints' }, el('summary', { text: `Hints (${s.hints.length}): open only if you're stuck` }), el('ul', {}, s.hints.map((h) => el('li', { text: h })))) : null,
+    el('div', { class: 'section' }, el('h3', { text: 'Your work' }),
+      el('div', { style: 'display:grid;gap:10px' },
+        input('Code location (folder, files or GitHub PR link)', s.codeLocation || '', (v) => (s.codeLocation = v.trim()), { placeholder: e.folder }),
+        el('label', { class: 'field' }, 'Notes for the reviewer', el('textarea', { value: s.devNotes || '', placeholder: 'Decisions, open questions, known flakiness…', onchange: (ev) => { s.devNotes = ev.target.value; touch(); } })),
+        s.status === 'in_review' ? el('p', { class: 'muted', style: 'margin:0;font-size:13px', text: `Ready for review. Tell Claude: "Review ${s.key}". The code is in ${s.codeLocation || e.folder}.` }) : null)),
+    el('div', { class: 'section' }, el('h3', { text: reviews.length ? `Reviews · ${reviews.length}` : 'Review' }),
+      reviews.length ? [...reviews].reverse().map((r, i) => reviewView(r, reviews.length - i)) :
+        el('p', { class: 'muted', style: 'margin:0', text: 'No review yet. Claude\'s reviews arrive as a small JSON snippet; paste it with Import.' })),
+    el('div', { style: 'display:flex;justify-content:flex-end' },
+      el('button', { class: 'btn danger sm', type: 'button', text: 'Delete story', onclick: () => confirmDialog(`Delete ${s.key}?`, 'This removes the story from this browser\'s tracker.', 'Delete', () => {
+        db.stories = db.stories.filter((x) => x.key !== s.key); closeModal(); commit(`${s.key} deleted`); }) })));
+}
+function reviewView(r, round) {
+  return el('div', { class: `review ${r.verdict}` },
+    el('div', { style: 'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap' },
+      el('span', { class: `verdict v-${r.verdict}`, text: r.verdict === 'approved' ? 'APPROVED' : 'CHANGES REQUESTED' }),
+      el('span', { class: 'mono muted', style: 'font-size:12px', text: `Round ${round}${r.date ? ' · ' + r.date : ''}${r.score != null ? ' · ' + r.score + '/10' : ''}` })),
+    r.summary ? el('p', { style: 'margin:0', text: r.summary }) : null,
+    r.comments?.length ? el('ol', {}, r.comments.map((c) => el('li', {}, el('span', { class: `sev ${c.severity || ''}`, text: c.severity || '' }),
+      c.file ? el('span', { class: 'mono muted', style: 'font-size:12px', text: `${c.file}${c.line ? ':' + c.line : ''} ` }) : null, el('div', { text: c.comment })))) : null);
+}
+
+// ---------- modal / dialogs ----------
+function showModal(node, center) { const sc = $('scrim'); sc.classList.toggle('center', !!center); sc.replaceChildren(node); sc.hidden = false; node.querySelector('button, input, textarea, select')?.focus(); }
+function closeModal() { $('scrim').hidden = true; $('scrim').replaceChildren(); ui.open = null; }
+function confirmDialog(title, msg, label, onOk) {
+  showModal(el('div', { class: 'dialog', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': title },
+    el('h3', { text: title }), el('p', { class: 'muted', style: 'margin:0', text: msg }),
+    el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
+      el('button', { class: 'btn ghost', type: 'button', text: 'Cancel', onclick: closeModal }),
+      el('button', { class: 'btn danger', type: 'button', text: label, onclick: () => { closeModal(); onOk(); } }))), true);
+}
+function exportDialog() {
+  const json = JSON.stringify(db, null, 2);
+  const ta = el('textarea', { readonly: true, value: json, 'aria-label': 'Exported tracker JSON' });
+  const name = `taskflow-tracker-${new Date().toISOString().slice(0, 10)}.json`;
+  showModal(el('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Export' },
+    el('h3', { text: 'Export your tracker' }),
+    el('p', { class: 'muted', style: 'margin:0', text: 'Download a backup, or copy the JSON to move your progress to another browser or share it with Claude.' }), ta,
+    el('div', { style: 'display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap' },
+      el('button', { class: 'btn ghost', type: 'button', text: 'Close', onclick: closeModal }),
+      el('button', { class: 'btn ghost', type: 'button', text: 'Copy', onclick: async () => { try { await navigator.clipboard.writeText(json); toast('Copied'); } catch { ta.select(); toast('Press Ctrl+C to copy'); } } }),
+      el('button', { class: 'btn', type: 'button', text: 'Download .json', onclick: () => {
+        const a = el('a', { href: URL.createObjectURL(new Blob([json], { type: 'application/json' })), download: name }); document.body.append(a); a.click(); a.remove(); toast(`Saved ${name}`); } }))), true);
+}
+function importDialog() {
+  const ta = el('textarea', { 'aria-label': 'JSON to import', placeholder: 'Paste an exported tracker, or a review snippet from Claude:\n{ "reviews": { "PW-103": { "verdict": "approved", "summary": "…", "comments": [] } } }' });
+  const file = el('input', { type: 'file', accept: '.json,application/json', 'aria-label': 'Choose a JSON file', onchange: async (ev) => { const f = ev.target.files[0]; if (f) ta.value = await f.text(); } });
+  showModal(el('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Import' },
+    el('h3', { text: 'Import' }),
+    el('p', { class: 'muted', style: 'margin:0', text: 'A full export replaces this tracker. A review snippet only adds the reviews (Approved moves the story to Done; Changes requested moves it to Changes Requested).' }),
+    file, ta,
+    el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
+      el('button', { class: 'btn ghost', type: 'button', text: 'Cancel', onclick: closeModal }),
+      el('button', { class: 'btn', type: 'button', text: 'Import', onclick: () => {
+        let data; try { data = JSON.parse(ta.value); } catch { toast('That is not valid JSON'); return; }
+        if (Array.isArray(data?.stories)) { db = { version: 1, sprints: data.sprints?.length ? data.sprints : fresh().sprints, stories: data.stories }; closeModal(); commit(`Imported ${data.stories.length} stories`); return; }
+        if (data?.reviews && typeof data.reviews === 'object') {
+          let n = 0;
+          for (const [key, r] of Object.entries(data.reviews)) {
+            const s = find(key); if (!s || !r?.verdict) continue;
+            s.reviews = [...(s.reviews || []), { date: new Date().toISOString().slice(0, 10), ...r }];
+            s.status = r.verdict === 'approved' ? 'done' : 'changes_requested'; n++;
+          }
+          closeModal(); commit(n ? `Added ${n} review${n > 1 ? 's' : ''}` : 'No matching stories found'); return;
+        }
+        toast('Unrecognised format: expected an export or a reviews snippet');
+      } }))), true);
+}
+
+render();
+</script>
+</body>
+</html>

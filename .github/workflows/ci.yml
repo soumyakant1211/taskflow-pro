@@ -1,0 +1,34 @@
+# Fast feedback on every push / PR: typecheck, unit tests and production builds.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck (api, web, automation)
+        run: pnpm typecheck
+      - name: Unit tests (API)
+        run: pnpm test:unit
+      - name: Build API
+        run: pnpm --filter api build
+      - name: Build web
+        run: pnpm --filter web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1

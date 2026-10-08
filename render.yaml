@@ -1,0 +1,30 @@
+# Render Blueprint – deploys the NestJS API.
+# Render dashboard → New → Blueprint → pick this repo. Fill DATABASE_URL (Neon) and CORS_ORIGIN when prompted.
+services:
+  - type: web
+    name: taskflow-pro-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter api && pnpm --filter api build
+    startCommand: cd apps/api && node dist/database/migrate.js && node dist/main.js
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false          # paste your Neon connection string
+      - key: DATABASE_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1h
+      - key: CORS_ORIGIN
+        sync: false          # e.g. https://taskflow-pro.vercel.app
+      - key: THROTTLE_LIMIT
+        value: "300"
+      - key: GUEST_LOGIN_ENABLED
+        value: "true"

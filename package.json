@@ -1,0 +1,22 @@
+{
+  "name": "taskflow-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TaskFlow Pro - enterprise project & task management platform (system under test for automation practice)",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter api --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter api build && pnpm --filter web build",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:seed": "pnpm --filter api db:seed",
+    "db:generate": "pnpm --filter api db:generate",
+    "typecheck": "pnpm -r lint",
+    "test:unit": "pnpm --filter api test",
+    "db:reset": "pnpm --filter api db:reset"
+  }
+}

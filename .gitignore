@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+.env
+.env.local
+*.log
+apps/api/src/generated/
+.DS_Store
+apps/web/next-env.d.ts
+*.tsbuildinfo
+# test frameworks (add your own as you build them)
+**/test-results/
+**/playwright-report/
+**/allure-results/
+**/allure-report/
+**/target/
+**/__pycache__/
+**/.pytest_cache/
+**/cypress/videos/
+**/cypress/screenshots/
+**/output.xml
+**/log.html
+**/report.html
+**/.auth/
+**/newman/
